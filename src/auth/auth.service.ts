@@ -43,6 +43,10 @@ export class AuthService {
   }
 
   async signUp(username: string, pass: string): Promise<void> {
+    if (process.env.NODE_ENV !== 'development') {
+      throw new UnauthorizedException('Sign up is only allowed in development mode');
+    }
+    
     const hashedPassword = await bcrypt.hash(pass, 10);
     const user = await this.userService.create({ username, password: hashedPassword });
     if(!user){

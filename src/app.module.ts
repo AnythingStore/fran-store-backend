@@ -7,6 +7,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { ConfigModule } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
 import { PrismaService } from './prisma.service';
+import { ProductModule } from './product/product.module';
 
 @Module({
   imports: [AuthModule, UserModule, 
@@ -24,6 +25,7 @@ import { PrismaService } from './prisma.service';
       ttl: 60000,
       limit: 60,
     }]),
+    ProductModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
