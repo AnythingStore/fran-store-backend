@@ -8,6 +8,9 @@ import { ConfigModule } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
 import { PrismaService } from './prisma.service';
 import { ProductModule } from './product/product.module';
+import { CategoryModule } from './category/category.module';
+import { StoreModule } from './store/store.module';
+import { StoreModule } from './store/store.module';
 
 @Module({
   imports: [AuthModule, UserModule, 
@@ -26,6 +29,8 @@ import { ProductModule } from './product/product.module';
       limit: 60,
     }]),
     ProductModule,
+    CategoryModule,
+    StoreModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

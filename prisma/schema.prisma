@@ -20,35 +20,39 @@ model User {
 }
 
 model Image {
-  id        Int       @id @default(autoincrement())
+  id        Int        @id @default(autoincrement())
   url       String
   filename  String
   mimetype  String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @default(now()) @updatedAt
   productId Int?
-  product   Product?  @relation(fields: [productId], references: [id])
+  product   Product?   @relation(fields: [productId], references: [id])
+  Category  Category?
   Carousel  Carousel?
+  StoreInfo StoreInfo?
 }
 
 model Product {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   name        String
   description String
   price       Int
-  categoryId  Int
-  category    Category @relation(fields: [categoryId], references: [id])
+  categoryId  Int?
+  category    Category? @relation(fields: [categoryId], references: [id])
   images      Image[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
 }
 
-model Category{
-  id          Int      @id @default(autoincrement())
-  products    Product[]
-  name        String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+model Category {
+  id        Int       @id @default(autoincrement())
+  products  Product[]
+  imageId   Int?      @unique
+  image     Image?    @relation(fields: [imageId], references: [id])
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
 }
 
 model Carousel {
@@ -58,4 +62,22 @@ model Carousel {
   image       Image?   @relation(fields: [imageId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
+}
+
+model StoreInfo {
+  id          Int    @id @default(autoincrement())
+  name        String
+  description String
+  address     String
+  phone       String
+  email       String
+  facebook    String
+  instagram   String
+  location    String
+
+  imageId Int?   @unique
+  image   Image? @relation(fields: [imageId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }

@@ -21,7 +21,7 @@ export class ProductService {
   readonly bucketName = 'products';
 
 
-  private async updateCache() {
+  async updateCache() {
     const products = await this.prisma.product.findMany({
       include: {
         images: true,
@@ -39,8 +39,9 @@ export class ProductService {
         name: createProductDto.name,
         description: createProductDto.description,
         price: createProductDto.price,
-        categoryId: createProductDto.categoryId,
-        images: null
+        // categoryId:3,
+        category: createProductDto.categoryId ? { connect: { id: createProductDto.categoryId } } : undefined,
+
       },
     });
 
@@ -74,7 +75,12 @@ export class ProductService {
       where: {
         id: id
       },
-      data: updateProductDto
+      data: {
+        name: updateProductDto.name,
+        description: updateProductDto.description,
+        price: updateProductDto.price,
+        categoryId: updateProductDto.categoryId,
+      }
     });
 
     await this.updateCache();
@@ -82,24 +88,74 @@ export class ProductService {
   }
 
   async remove(id: number) {
+    return await this.prisma.$transaction(async (prisma) => {
+      const product = await this.prisma.product.findUnique({
+        where: {
+          id: id
+        },
+        include: {
+          images: true
+        }
+      });
+      if (!product) throw new NotFoundException(`Product with ID ${id} not found`);
 
-    const product = await this.prisma.product.findUnique({
-      where: {
-        id: id
-      },
-      include: {
-        images: true
+      const result = await this.prisma.product.delete({
+        where: {
+          id: id
+        }
+      });
+      const imageIds = product.images.map(image => image.id);
+      await this.imageService.deleteMany(imageIds, this.bucketName);
+      await this.updateCache();
+      return { result: result, massage: `Product with ID ${id} deleted, and ${imageIds.length} images deleted` };
+    }
+    );
+  }
+
+
+  async deleteManyImages(id:number, imagesId: number[]) {
+    return await this.prisma.$transaction(async (prisma) => {
+      const product = await prisma.product.findUnique({
+        where: { id },
+        include: { images: true },
+      });
+      if (!product) {
+        throw new NotFoundException(`Product with ID ${id} not found`);
       }
-    });
-    if (!product) throw new NotFoundException(`Product with ID ${id} not found`);
-
-    const result = await this.prisma.product.delete({
-      where: {
-        id: id
+      if (product && product.images.length > 0) {
+        await this.imageService.deleteMany(product.images.map(image=>image.id), this.bucketName);
       }
+      await this.updateCache();
     });
+  }
 
-    await this.updateCache();
-    return result;
+  async uploadManyImages(id: number, files: Express.Multer.File[]) {
+    return await this.prisma.$transaction(async (prisma) => {
+      const product = await prisma.product.findUnique({
+        where: { id },
+        include: { images: true },
+      });
+
+      if (!product) {
+        throw new NotFoundException(`Product with ID ${id} not found`);
+      }
+
+      const imagesUpload: {publicURL:string, filename:string}[] = await this.storageService.uploadImages(files, this.bucketName);
+
+
+      const images = await this.prisma.image.createManyAndReturn({
+        data: imagesUpload.map(image=>({
+          filename: image.filename,
+          mimetype: files[0].mimetype,
+          url: image.publicURL,
+        })),
+      });
+
+      await this.updateCache();
+      return {
+        message: `${files.length} images uploaded successfully`,
+        filePath: files.map(file=>file.path),
+      };
+    });
   }
 }
