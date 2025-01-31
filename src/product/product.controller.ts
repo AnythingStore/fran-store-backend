@@ -6,6 +6,7 @@ import { CacheInterceptor, CacheKey } from '@nestjs/cache-manager';
 import { Public } from 'src/auth/public';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
+import { ChangeImageOrder as ChangeImageOrderDto } from './dto/change-image-orderdto';
 
 @Controller('product')
 @UseInterceptors(CacheInterceptor)
@@ -51,6 +52,11 @@ export class ProductController {
   @Delete(':id/images')
   deleteImages(@Param('id') id: string, @Body('imageIds') imageIds: number[]) {
     return this.productService.deleteManyImages(+id, imageIds);
+  }
+
+  @Patch(':id/change_images_order')
+  changeOrder(@Param('id') id: string, @Body() changeImageOrderDto: ChangeImageOrderDto) {
+    return this.productService.changeImagesOrder(+id, changeImageOrderDto);
   }
 
 }

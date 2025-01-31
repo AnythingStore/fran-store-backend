@@ -10,7 +10,8 @@ import { PrismaService } from './prisma.service';
 import { ProductModule } from './product/product.module';
 import { CategoryModule } from './category/category.module';
 import { StoreModule } from './store/store.module';
-import { StoreModule } from './store/store.module';
+import { StorageService } from './storage.service';
+import { CarouselModule } from './carousel/carousel.module';
 
 @Module({
   imports: [AuthModule, UserModule, 
@@ -31,8 +32,9 @@ import { StoreModule } from './store/store.module';
     ProductModule,
     CategoryModule,
     StoreModule,
+    CarouselModule,
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService],
+  providers: [AppService, PrismaService, StorageService],
 })
 export class AppModule {}

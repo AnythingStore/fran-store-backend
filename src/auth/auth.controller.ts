@@ -46,5 +46,12 @@ export class AuthController {
 
     return this.authService.changePassword(req.user.sub, changePasswordDto);
   }
+  
+  @HttpCode(HttpStatus.OK)
+  @Post('verify_token')
+  verifyToken(){
+    return ;
+  }
+  
 
 }

@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Product" ADD COLUMN     "available" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "stock" INTEGER NOT NULL DEFAULT 0,
+ALTER COLUMN "price" SET DEFAULT 0;

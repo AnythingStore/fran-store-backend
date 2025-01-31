@@ -42,9 +42,9 @@ export class ImageService {
     if (!images) {
       throw new NotFoundException('Product not found');
     }
-
+    console.log(3.1)
     await this.storageService.deleteManyImages(images.map(image => image.filename), bucket);
-
+    console.log(3.2)
     const result = await this.prisma.image.deleteMany({
       where: { id: { in: imagesId } },
     });

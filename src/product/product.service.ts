@@ -8,6 +8,7 @@ import { Cache } from 'cache-manager';
 import { ImageService } from 'src/image/image.service';
 import { PrismaService } from 'src/prisma.service';
 import { StorageService } from 'src/storage.service';
+import { ChangeImageOrder as ChangeImageOrderDto } from './dto/change-image-orderdto';
 
 @Injectable()
 export class ProductService {
@@ -19,7 +20,10 @@ export class ProductService {
 
   }
   readonly bucketName = 'products';
-
+  readonly optionTrancitions = {
+    maxWait: 30000, // Incrementar el tiempo de espera máximo a 30 segundos
+    timeout: 30000, // Incrementar el tiempo de espera de la transacción a 30 segundos
+  };
 
   async updateCache() {
     const products = await this.prisma.product.findMany({
@@ -34,11 +38,20 @@ export class ProductService {
 
 
   async create(createProductDto: CreateProductDto) {
+    const category = await this.prisma.category.findUnique({
+      where:{
+        id: createProductDto.categoryId,
+      }
+    });   
+    if(!category) throw new NotFoundException(`Category with ID ${createProductDto.categoryId} not found`);
+
     const result = await this.prisma.product.create({
       data: {
         name: createProductDto.name,
         description: createProductDto.description,
         price: createProductDto.price,
+        stock: createProductDto.stock,
+        available: createProductDto.available,
         // categoryId:3,
         category: createProductDto.categoryId ? { connect: { id: createProductDto.categoryId } } : undefined,
 
@@ -80,6 +93,8 @@ export class ProductService {
         description: updateProductDto.description,
         price: updateProductDto.price,
         categoryId: updateProductDto.categoryId,
+        stock: updateProductDto.stock,
+        available: updateProductDto.available,
       }
     });
 
@@ -97,18 +112,20 @@ export class ProductService {
           images: true
         }
       });
-      if (!product) throw new NotFoundException(`Product with ID ${id} not found`);
 
+      const imageIds = product.images.map(image => image.id);
+      await this.imageService.deleteMany(imageIds, this.bucketName);
+
+      if (!product) throw new NotFoundException(`Product with ID ${id} not found`);
       const result = await this.prisma.product.delete({
         where: {
           id: id
         }
       });
-      const imageIds = product.images.map(image => image.id);
-      await this.imageService.deleteMany(imageIds, this.bucketName);
+      
       await this.updateCache();
       return { result: result, massage: `Product with ID ${id} deleted, and ${imageIds.length} images deleted` };
-    }
+    }, this.optionTrancitions
     );
   }
 
@@ -122,11 +139,28 @@ export class ProductService {
       if (!product) {
         throw new NotFoundException(`Product with ID ${id} not found`);
       }
+      let imagesDeletedId:number[] = [];
+      console.log(`product.images ${product.images.length}`);
       if (product && product.images.length > 0) {
-        await this.imageService.deleteMany(product.images.map(image=>image.id), this.bucketName);
+        imagesDeletedId = (await this.imageService.deleteMany(imagesId, this.bucketName)).map(e=>e.id);
       }
+      console.log(`product.images ${product.images}`);
+      console.log(`product.images ${product.images}`);
+
+        //updates orders images
+        const lisImageIds: number[] = Array.isArray(product.orderImage) ? product.orderImage as number[] : [];
+        const newLisImageIds = lisImageIds.filter(id=>!imagesDeletedId.includes(id));
+        await this.prisma.product.update({
+          where:{
+            id
+          },
+          data:{
+            orderImage: newLisImageIds
+          }
+        });
+
       await this.updateCache();
-    });
+    }, this.optionTrancitions);
   }
 
   async uploadManyImages(id: number, files: Express.Multer.File[]) {
@@ -140,7 +174,9 @@ export class ProductService {
         throw new NotFoundException(`Product with ID ${id} not found`);
       }
 
+      console.log(1);
       const imagesUpload: {publicURL:string, filename:string}[] = await this.storageService.uploadImages(files, this.bucketName);
+      console.log(2);
 
 
       const images = await this.prisma.image.createManyAndReturn({
@@ -150,12 +186,61 @@ export class ProductService {
           url: image.publicURL,
         })),
       });
-
+      console.log(3);
+      //orders images
+      const lisImageIds: number[] = Array.isArray(product.orderImage) ? product.orderImage as number[] : [];
+      const newLisImageIds = lisImageIds.concat(images.map(e=>e.id));
+      console.log(`lisImageIds ${lisImageIds}`);
+      console.log(`newLisImageIds ${newLisImageIds}`);
+      console.log(`newLisImageIds ${newLisImageIds}`);
+      console.log(`lisImageIds ${lisImageIds.length}`);
+      console.log(`newLisImageIds ${newLisImageIds.length}`);
+      console.log(`lisImageIds ${lisImageIds.toString()}`);
+      console.log(`newLisImageIds ${newLisImageIds.toString()}`);
+      await this.prisma.product.update({
+        where:{
+          id
+        },
+        data:{
+          orderImage: newLisImageIds,
+          images: { connect: newLisImageIds.map(imageId=>({id:imageId}))}
+        }
+      })
+      console.log(4);
       await this.updateCache();
+      console.log(5);
       return {
         message: `${files.length} images uploaded successfully`,
         filePath: files.map(file=>file.path),
+        listImagesId: images.map(i=>i.id),
       };
-    });
+    },this.optionTrancitions);
+  }
+  async changeImagesOrder(id: number, changeImageOrderDto:ChangeImageOrderDto){
+    const product = await this.prisma.product.findUnique({where:{id: id}, include:{images:{select:{id:true}}}});
+    if(!product) throw new NotFoundException(`Product with ID ${id} not found`);
+    if(!this._haveSameValues(changeImageOrderDto.orderImage, product.images.map(image=>image.id))) throw new NotFoundException(`error change the order product have ${product.images.map(image=>image.id)} and you pass ${changeImageOrderDto.orderImage}`);
+    await this.prisma.product.update({
+      where:{
+        id
+      },
+      data:{
+        orderImage: changeImageOrderDto.orderImage
+      }
+    }, );
+    await this.updateCache();
+  }
+
+
+
+  _haveSameValues(list1: number[], list2: number[]): boolean {
+    if (list1.length !== list2.length) {
+      return false;
+    }
+  
+    const sortedList1 = [...list1].sort((a, b) => a - b);
+    const sortedList2 = [...list2].sort((a, b) => a - b);
+  
+    return sortedList1.every((value, index) => value === sortedList2[index]);
   }
 }

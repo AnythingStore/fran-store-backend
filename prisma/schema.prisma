@@ -10,7 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL") //LOCAL_DATABASE_URL DATABASE_URL
 }
 
 model User {
@@ -34,15 +34,18 @@ model Image {
 }
 
 model Product {
-  id          Int       @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   name        String
   description String
-  price       Int
-  categoryId  Int?
-  category    Category? @relation(fields: [categoryId], references: [id])
+  price       Int      @default(0)
+  stock       Int      @default(0)
+  available   Boolean  @default(true)
+  categoryId  Int
+  category    Category @relation(fields: [categoryId], references: [id])
   images      Image[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @default(now()) @updatedAt
+  orderImage  Json     @default("[]") // Lista de IDs de imágenes
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 }
 
 model Category {
@@ -57,7 +60,6 @@ model Category {
 
 model Carousel {
   id          Int      @id @default(autoincrement())
-  containerId Int
   imageId     Int?     @unique
   image       Image?   @relation(fields: [imageId], references: [id])
   createdAt   DateTime @default(now())
@@ -74,6 +76,7 @@ model StoreInfo {
   facebook    String
   instagram   String
   location    String
+  orderCarousel  Json   @default("[]") // Lista de Ids de carousel
 
   imageId Int?   @unique
   image   Image? @relation(fields: [imageId], references: [id])

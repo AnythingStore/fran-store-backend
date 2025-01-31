@@ -13,11 +13,6 @@ import { Public } from 'src/auth/public';
 export class StoreController {
   constructor(private readonly storeService: StoreService) {}
 
-  @Post()
-  create(@Body() createStoreDto: CreateStoreDto) {
-    return this.storeService.create(createStoreDto);
-  }
-
   @Public()
   @Get()
   @CacheKey('store')
@@ -35,7 +30,7 @@ export class StoreController {
       storage: memoryStorage(),
     }))
     putImage(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
-      return this.storeService.putImage(+id, file);
+      return this.storeService.putImage(file);
     }
 
 
