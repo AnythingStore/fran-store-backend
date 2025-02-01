@@ -20,12 +20,12 @@ export class StoreController {
     return this.storeService.findOrCreate();
   }
 
-  @Patch(':id')
+  @Patch()
   update(@Param('id') id: string, @Body() updateStoreDto: UpdateStoreDto) {
     return this.storeService.update(updateStoreDto);
   }
 
-   @Put(':id/image')
+   @Put('/image')
     @UseInterceptors(FileInterceptor('file', {
       storage: memoryStorage(),
     }))

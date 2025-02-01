@@ -2,21 +2,28 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, Put
 import { CarouselService } from './carousel.service';
 import { CreateCarouselDto } from './dto/create-carousel.dto';
 import { UpdateCarouselDto } from './dto/update-carousel.dto';
-import { CacheInterceptor } from '@nestjs/cache-manager';
+import { CacheInterceptor, CacheKey } from '@nestjs/cache-manager';
 import { Public } from 'src/auth/public';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
+import { ChangeCarouselOrderDto } from './dto/change-order-carousel.dto';
 
 @Controller('carousel')
 @UseInterceptors(CacheInterceptor)
 export class CarouselController {
   constructor(private readonly carouselService: CarouselService) {}
 
+  @Patch('/change_order')
+  changeOrder(@Body() changeCarouselOrderDto: ChangeCarouselOrderDto) {
+    return this.carouselService.changeOrder(changeCarouselOrderDto);
+  }
+  
   @Post()
   create(@Body() createCarouselDto: CreateCarouselDto) {
     return this.carouselService.create(createCarouselDto);
   }
 
+  @CacheKey('carousel')
   @Public()
   @Get()
   findAll() {
@@ -43,6 +50,9 @@ export class CarouselController {
       storage: memoryStorage(),
   }))
   putImage(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
-    return this.categoryService.putImage(+id, file);
+    return this.carouselService.putImage(+id, file);
   }
+
+
+
 }

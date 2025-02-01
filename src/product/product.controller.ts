@@ -6,7 +6,7 @@ import { CacheInterceptor, CacheKey } from '@nestjs/cache-manager';
 import { Public } from 'src/auth/public';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { ChangeImageOrder as ChangeImageOrderDto } from './dto/change-image-orderdto';
+import { ChangeImageOrder as ChangeImageOrderDto } from './dto/change-image-order.dto';
 
 @Controller('product')
 @UseInterceptors(CacheInterceptor)

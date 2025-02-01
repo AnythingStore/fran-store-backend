@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCarouselDto } from './dto/create-carousel.dto';
 import { UpdateCarouselDto } from './dto/update-carousel.dto';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -6,6 +6,8 @@ import { Cache } from 'cache-manager';
 import { PrismaService } from 'src/prisma.service';
 import { ImageService } from 'src/image/image.service';
 import { StorageService } from 'src/storage.service';
+import { ChangeCarouselOrderDto } from './dto/change-order-carousel.dto';
+import { haveSameValues } from 'src/utils/orders';
 
 
 @Injectable()
@@ -105,6 +107,26 @@ export class CarouselService {
         message: `${file} images uploaded successfully`,
         filePath: file.path,
       };
+    }, this.optionTrancitions);
+  }
+
+  async changeOrder(changeCarouselOrderDto: ChangeCarouselOrderDto) {
+    return await this.prisma.$transaction(async (prisma) => {
+      const store  = await prisma.storeInfo.findFirst({ });
+      const carousels = await prisma.carousel.findMany();
+
+      if(!haveSameValues(carousels.map(e=>e.id), changeCarouselOrderDto.orderCarousel)) throw new BadRequestException(`Error change, the order carousel have ${carousels.map(carousel=>carousel.id)} and you pass ${changeCarouselOrderDto.orderCarousel}`);
+      await this.prisma.storeInfo.updateMany({
+        where:{
+          id: store.id
+        },
+        data: {
+          orderCarousel: changeCarouselOrderDto.orderCarousel
+        }
+      });
+
+      await this.updateCache();
+      return { message: 'order updated successfully' };
     }, this.optionTrancitions);
   }
 }

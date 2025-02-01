@@ -21,8 +21,8 @@ export class CategoryService {
 
   readonly bucketName = 'categories';
   readonly optionTrancitions = {
-    maxWait: 50000, // Incrementar el tiempo de espera máximo a 30 segundos
-    timeout: 50000, // Incrementar el tiempo de espera de la transacción a 30 segundos
+    maxWait: 50000,
+    timeout: 50000,
   };
 
   private async updateCache() {

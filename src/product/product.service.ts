@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
@@ -8,7 +8,8 @@ import { Cache } from 'cache-manager';
 import { ImageService } from 'src/image/image.service';
 import { PrismaService } from 'src/prisma.service';
 import { StorageService } from 'src/storage.service';
-import { ChangeImageOrder as ChangeImageOrderDto } from './dto/change-image-orderdto';
+import { ChangeImageOrder as ChangeImageOrderDto } from './dto/change-image-order.dto';
+import { haveSameValues } from 'src/utils/orders';
 
 @Injectable()
 export class ProductService {
@@ -219,7 +220,7 @@ export class ProductService {
   async changeImagesOrder(id: number, changeImageOrderDto:ChangeImageOrderDto){
     const product = await this.prisma.product.findUnique({where:{id: id}, include:{images:{select:{id:true}}}});
     if(!product) throw new NotFoundException(`Product with ID ${id} not found`);
-    if(!this._haveSameValues(changeImageOrderDto.orderImage, product.images.map(image=>image.id))) throw new NotFoundException(`error change the order product have ${product.images.map(image=>image.id)} and you pass ${changeImageOrderDto.orderImage}`);
+    if(!haveSameValues(changeImageOrderDto.orderImage, product.images.map(image=>image.id))) throw new BadRequestException(`Error change, the order product have ${product.images.map(image=>image.id)} and you pass ${changeImageOrderDto.orderImage}`);
     await this.prisma.product.update({
       where:{
         id
@@ -233,14 +234,5 @@ export class ProductService {
 
 
 
-  _haveSameValues(list1: number[], list2: number[]): boolean {
-    if (list1.length !== list2.length) {
-      return false;
-    }
-  
-    const sortedList1 = [...list1].sort((a, b) => a - b);
-    const sortedList2 = [...list2].sort((a, b) => a - b);
-  
-    return sortedList1.every((value, index) => value === sortedList2[index]);
-  }
+ 
 }

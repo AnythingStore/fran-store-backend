@@ -19,7 +19,12 @@ export class StoreService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) { }
 
-  readonly bucketName = 'store';
+  readonly bucketName = 'local';
+  readonly optionTrancitions = {
+    maxWait: 50000,
+    timeout: 50000,
+  };
+
   async updateCache(): Promise<void> {
     const store = await this.prisma.storeInfo.findFirst({
       include: {
@@ -84,7 +89,7 @@ export class StoreService {
         message: `${file} images uploaded successfully`,
         filePath: file.path,
       };
-    });
+    }, this.optionTrancitions);
   }
 
 }
