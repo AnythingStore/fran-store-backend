@@ -13,7 +13,21 @@ import { ChangeCarouselOrderDto } from './dto/change-order-carousel.dto';
 export class CarouselController {
   constructor(private readonly carouselService: CarouselService) {}
 
-  @Patch('/change_order')
+  @Public()
+  @Get()
+  @CacheKey('carousel')
+  findAll() {
+    return this.carouselService.findAll();
+  }
+
+  @Public()
+  @Get('/carousel_order')
+  @CacheKey('carouselOrder')
+  findOrder() {
+    return this.carouselService.findOrCreateOrder();
+  }
+  
+  @Patch('/carousel_order')
   changeOrder(@Body() changeCarouselOrderDto: ChangeCarouselOrderDto) {
     return this.carouselService.changeOrder(changeCarouselOrderDto);
   }
@@ -21,13 +35,6 @@ export class CarouselController {
   @Post()
   create(@Body() createCarouselDto: CreateCarouselDto) {
     return this.carouselService.create(createCarouselDto);
-  }
-
-  @CacheKey('carousel')
-  @Public()
-  @Get()
-  findAll() {
-    return this.carouselService.findAll();
   }
 
   @Public()
@@ -43,6 +50,7 @@ export class CarouselController {
 
   @Delete(':id')
   remove(@Param('id') id: string) {
+
     return this.carouselService.remove(+id);
   }
   @Put(':id/image')
@@ -53,6 +61,10 @@ export class CarouselController {
     return this.carouselService.putImage(+id, file);
   }
 
+  @Post('update_cache')
+  updateCache() {
+    return this.carouselService.updateCache();
+  }
 
 
 }

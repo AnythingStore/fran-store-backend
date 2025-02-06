@@ -31,6 +31,10 @@ export class CreateStoreDto {
 
   @IsOptional()
   @IsString()
-  location: string;
-
+  openDays:string;
 }
+
+// phone       String  @default("")
+// email       String  @default("")
+// facebook    String  @default("")
+// instagram   String  @default("")

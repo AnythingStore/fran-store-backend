@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFile, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFile, UploadedFiles, Query } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -11,18 +11,38 @@ import { ChangeImageOrder as ChangeImageOrderDto } from './dto/change-image-orde
 @Controller('product')
 @UseInterceptors(CacheInterceptor)
 export class ProductController {
-  constructor(private readonly productService: ProductService) {}
-
+  constructor(private readonly productService: ProductService) { }
+  
+  
+  @Public()
+  @Get()
+  find(@Query('name') name: string, @Query('category') category: string) {
+    console.log(`categoryId ${category}`);
+    console.log(`categoryId ${category}`);
+    return this.productService.find(name, category?+category:undefined);
+  }
+  
+  
   @Post()
   create(@Body() createProductDto: CreateProductDto) {
     return this.productService.create(createProductDto);
   }
 
-  @Public()
-  @Get()
-  @CacheKey('products')
+  @Get('/all')
+  @CacheKey('productsAll')
   findAll() {
     return this.productService.findAll();
+  }
+
+
+
+
+
+  @Public()
+  @Get('/home')
+  @CacheKey('productsHome')
+  findProductsHome() {
+    return this.productService.findProductsHome();
   }
 
   @Public()
@@ -41,14 +61,14 @@ export class ProductController {
     return this.productService.remove(+id);
   }
 
-  @Post(':id/image')
-  @UseInterceptors(FilesInterceptor('files',10, {
+  @Post(':id/images')
+  @UseInterceptors(FilesInterceptor('files', 10, {
     storage: memoryStorage(),
   }))
   uploadImage(@Param('id') id: String, @UploadedFiles() files: Express.Multer.File[]) {
     return this.productService.uploadManyImages(+id, files);
   }
-  
+
   @Delete(':id/images')
   deleteImages(@Param('id') id: string, @Body('imageIds') imageIds: number[]) {
     return this.productService.deleteManyImages(+id, imageIds);
@@ -57,6 +77,11 @@ export class ProductController {
   @Patch(':id/change_images_order')
   changeOrder(@Param('id') id: string, @Body() changeImageOrderDto: ChangeImageOrderDto) {
     return this.productService.changeImagesOrder(+id, changeImageOrderDto);
+  }
+
+  @Post('update_cache')
+  updateCache() {
+    return this.productService.updateCache();
   }
 
 }

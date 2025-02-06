@@ -3,6 +3,7 @@ import { PrismaService } from 'src/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ChangePasswordDto } from 'src/auth/dto/change-password.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ChangeAllCredentialsDto } from 'src/auth/dto/change-all-crethentials.dto';
 
 @Injectable()
 export class UserService {
@@ -26,7 +27,18 @@ export class UserService {
       }
     })
   }
-
+  
+  async updateAllCrethentials(userId: number, newPassword: string, changeAllCredentialsDto: ChangeAllCredentialsDto) {
+    return await this.prisma.user.update({
+      where: {
+        id: userId
+      },
+      data: {
+        password: newPassword,
+        username: changeAllCredentialsDto.username,
+      }
+    });
+  }
   async updatePassword(userId: number, newPassword: string, changePasswordDto: ChangePasswordDto) {
     return await this.prisma.user.update({
       where: {

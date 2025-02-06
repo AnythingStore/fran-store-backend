@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
 import { SingingDto } from './dto/singing.dto copy';
 import { UpdateUserDto } from 'src/user/dto/update-user.dto';
+import { ChangeAllCredentialsDto } from './dto/change-all-crethentials.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -35,6 +36,11 @@ export class AuthController {
     return this.authService.signout(token);
   }
 
+  @Post('change_all_credentials')
+  changeAllcredentials(@Request() req, @Body() changeAllCredentialsDto:ChangeAllCredentialsDto){
+    return this.authService.changeAllCrethentials(req.user.sub, changeAllCredentialsDto);
+  }
+
   @Post('change_credentials')
   resetPassword(@Request() req, @Body() updateUserDto:UpdateUserDto){
     return this.authService.changeCrethentials(req.user.sub, updateUserDto);
@@ -43,7 +49,6 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('change_password')
   changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto){
-
     return this.authService.changePassword(req.user.sub, changePasswordDto);
   }
   

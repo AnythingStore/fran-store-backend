@@ -90,9 +90,12 @@ export class StorageService {
   }
 
   async deleteManyImages(filenames: string[], bucket: string): Promise<void> {
+    console.log(22);
     const { data, error } = await this.supabase.storage
       .from(bucket)
       .remove(filenames.map(filename=>`public/${filename}`));
+
+    console.log(23);
 
     if (error) {
       throw new Error(`Failed to delete image from storage: ${error.message}`);
@@ -101,6 +104,7 @@ export class StorageService {
     if (!data) {
       throw new Error('Failed to delete image: No data returned');
     }
+    console.log(24);
   }
 
 

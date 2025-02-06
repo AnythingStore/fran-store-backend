@@ -48,4 +48,10 @@ export class CategoryController {
     return this.categoryService.putImage(+id, file);
   }
 
+
+  @Post('update_cache')
+  updateCache() {
+    return this.categoryService.updateCache();
+  }
+
 }

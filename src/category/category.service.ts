@@ -25,8 +25,18 @@ export class CategoryService {
     timeout: 50000,
   };
 
-  private async updateCache() {
-    const categories = await this.prisma.category.findMany();
+  async updateCache() {
+    const categories = await this.prisma.category.findMany({
+      include: {
+        image: {
+          select: {
+            id: true,
+            url: true
+          }
+        }
+      }
+    });
+
     await this.cacheManager.set('category', categories, 0);
     await this.productService.updateCache();
     // console.log('Category cache updated');
@@ -41,13 +51,30 @@ export class CategoryService {
   }
 
   async findAll() {
-    return await this.prisma.category.findMany();
+    return await this.prisma.category.findMany({
+      include: {
+        image: {
+          select: {
+            id: true,
+            url: true
+          }
+        }
+      }
+    });
   }
 
   async findOne(id: number) {
     return await this.prisma.category.findUnique({
       where: {
         id: id
+      },
+      include: {
+        image: {
+          select: {
+            id: true,
+            url: true
+          }
+        }
       }
     });
   }
@@ -64,8 +91,7 @@ export class CategoryService {
   }
 
   async remove(id: number) {
-    return await this.prisma.$transaction(async (prisma) => {
-
+    const result = await this.prisma.$transaction(async (prisma) => {
       const category = await this.prisma.category.findUnique({
         where: {
           id: id
@@ -78,27 +104,27 @@ export class CategoryService {
           categoryId: id
         },
         select: {
-          id:true,
-          images:{
-            select:{
-              id:true
+          id: true,
+          images: {
+            select: {
+              id: true
             }
           }
         }
       });
 
-      const productsImages:number[] = products.flatMap(product => product.images.map(image=> image.id));
-      
+      const productsImages: number[] = products.flatMap(product => product.images.map(image => image.id));
+
       //delete all image of all products of this category
       const productsImagesDeletecd = await this.imageService.deleteMany(productsImages, this.productService.bucketName);
-      
+
       //delete all products of this category
       const resultDeleteProducts = await this.prisma.product.deleteMany({
         where: {
           categoryId: id
         }
       });
-      
+
       //delete image of this category
       console.log(`category.imageId ${category.imageId}`);
       const categoryImage = await this.imageService.delete(category.imageId, this.bucketName);
@@ -109,15 +135,15 @@ export class CategoryService {
           id: id
         }
       });
-      await this.updateCache();
       return { result: result, message: `Category deleted successfully, category image deleted ${categoryImage}, products deleted ${products}, images of products deleted ${productsImages}` };
     }, this.optionTrancitions);
-
+    await this.updateCache();
+    return result;
   }
 
 
-  
-  async putImage(id:number, file: Express.Multer.File) {
+
+  async putImage(id: number, file: Express.Multer.File) {
     return await this.prisma.$transaction(async (prisma) => {
       const category = await prisma.category.findUnique({
         where: { id },
@@ -129,7 +155,7 @@ export class CategoryService {
       console.log(1);
 
       const imageId = await this.imageService.replace(category.image, file, this.bucketName);
-      
+
       console.log(2);
       await this.prisma.category.update({
         where: { id },

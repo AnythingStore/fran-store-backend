@@ -2,7 +2,6 @@ import { BadRequestException, Inject, Injectable, NotFoundException } from '@nes
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
-
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { ImageService } from 'src/image/image.service';
@@ -20,31 +19,41 @@ export class ProductService {
   ) {
 
   }
+
+  readonly maxProductsByCategory = 20;
   readonly bucketName = 'products';
   readonly optionTrancitions = {
     maxWait: 30000, // Incrementar el tiempo de espera máximo a 30 segundos
     timeout: 30000, // Incrementar el tiempo de espera de la transacción a 30 segundos
   };
 
+  private async updateCagheProductsHome() {
+    await this.cacheManager.del('productsHome');
+  }
+
   async updateCache() {
     const products = await this.prisma.product.findMany({
       include: {
-        images: true,
-      }
-    }
-    );
-
-    await this.cacheManager.set('products', products, 0);
+        images: {
+          select: {
+            url: true,
+            id: true,
+          },
+        },
+      },
+    });
+    await this.updateCagheProductsHome();
+    await this.cacheManager.del('productsAll');
   }
 
 
   async create(createProductDto: CreateProductDto) {
     const category = await this.prisma.category.findUnique({
-      where:{
+      where: {
         id: createProductDto.categoryId,
       }
-    });   
-    if(!category) throw new NotFoundException(`Category with ID ${createProductDto.categoryId} not found`);
+    });
+    if (!category) throw new NotFoundException(`Category with ID ${createProductDto.categoryId} not found`);
 
     const result = await this.prisma.product.create({
       data: {
@@ -66,8 +75,36 @@ export class ProductService {
   async findAll() {
     return await this.prisma.product.findMany({
       include: {
-        images: true
+        images: {
+          select: {
+            id: true,
+            url: true,
+          },
+        }
       }
+    });
+  }
+
+  async find(name:string, categoryId?:number) {
+
+    return await this.prisma.product.findMany({
+      where: {
+      categoryId: categoryId,
+      available: true,
+      name: {
+        contains: name,
+        mode: 'insensitive',
+      }
+      },
+      include: {
+      images: {
+        select: {
+        url: true,
+        id: true,
+
+        },
+      },
+      },
     });
   }
 
@@ -77,11 +114,64 @@ export class ProductService {
         id: id
       },
       include: {
-        images: true
+        images: {
+          select: {
+            url: true,
+            id: true,
+
+          },
+        }
       }
     });
     if (!product) throw new NotFoundException(`Product with ID ${id} not found`);
     return product;
+  }
+
+
+
+  async findProductsHome() {
+    const categories = await this.prisma.category.findMany({
+      include: {
+        image: {
+          select: {
+            url: true,
+            id: true,
+
+          },
+        }
+      }
+    });
+
+    const productByCategory = [];
+
+    for (const category of categories) {
+      const products = await this.prisma.product.findMany({
+        where: {
+          available: true,
+          categoryId: category.id,
+        },
+        take: this.maxProductsByCategory,
+        include: {
+          images: {
+            select: {
+              url: true,
+              id: true,
+
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        }
+      });
+
+      productByCategory.push({
+        category: category,
+        products: products
+      });
+    }
+
+    return productByCategory;
   }
 
   async update(id: number, updateProductDto: UpdateProductDto) {
@@ -104,7 +194,7 @@ export class ProductService {
   }
 
   async remove(id: number) {
-    return await this.prisma.$transaction(async (prisma) => {
+    const result = await this.prisma.$transaction(async (prisma) => {
       const product = await this.prisma.product.findUnique({
         where: {
           id: id
@@ -123,15 +213,16 @@ export class ProductService {
           id: id
         }
       });
-      
-      await this.updateCache();
+
       return { result: result, massage: `Product with ID ${id} deleted, and ${imageIds.length} images deleted` };
     }, this.optionTrancitions
     );
+
+    await this.updateCache();
+    return result;
   }
 
-
-  async deleteManyImages(id:number, imagesId: number[]) {
+  async deleteManyImages(id: number, imagesId: number[]) {
     return await this.prisma.$transaction(async (prisma) => {
       const product = await prisma.product.findUnique({
         where: { id },
@@ -140,26 +231,25 @@ export class ProductService {
       if (!product) {
         throw new NotFoundException(`Product with ID ${id} not found`);
       }
-      let imagesDeletedId:number[] = [];
+      let imagesDeletedId: number[] = [];
       console.log(`product.images ${product.images.length}`);
       if (product && product.images.length > 0) {
-        imagesDeletedId = (await this.imageService.deleteMany(imagesId, this.bucketName)).map(e=>e.id);
+        imagesDeletedId = (await this.imageService.deleteMany(imagesId, this.bucketName)).map(e => e.id);
       }
       console.log(`product.images ${product.images}`);
       console.log(`product.images ${product.images}`);
 
-        //updates orders images
-        const lisImageIds: number[] = Array.isArray(product.orderImage) ? product.orderImage as number[] : [];
-        const newLisImageIds = lisImageIds.filter(id=>!imagesDeletedId.includes(id));
-        await this.prisma.product.update({
-          where:{
-            id
-          },
-          data:{
-            orderImage: newLisImageIds
-          }
-        });
-
+      //updates orders images
+      const lisImageIds: number[] = Array.isArray(product.orderImage) ? product.orderImage as number[] : [];
+      const newLisImageIds = lisImageIds.filter(id => !imagesDeletedId.includes(id));
+      await this.prisma.product.update({
+        where: {
+          id
+        },
+        data: {
+          orderImage: newLisImageIds
+        }
+      });
       await this.updateCache();
     }, this.optionTrancitions);
   }
@@ -176,12 +266,12 @@ export class ProductService {
       }
 
       console.log(1);
-      const imagesUpload: {publicURL:string, filename:string}[] = await this.storageService.uploadImages(files, this.bucketName);
+      const imagesUpload: { publicURL: string, filename: string }[] = await this.storageService.uploadImages(files, this.bucketName);
       console.log(2);
 
 
       const images = await this.prisma.image.createManyAndReturn({
-        data: imagesUpload.map(image=>({
+        data: imagesUpload.map(image => ({
           filename: image.filename,
           mimetype: files[0].mimetype,
           url: image.publicURL,
@@ -190,7 +280,7 @@ export class ProductService {
       console.log(3);
       //orders images
       const lisImageIds: number[] = Array.isArray(product.orderImage) ? product.orderImage as number[] : [];
-      const newLisImageIds = lisImageIds.concat(images.map(e=>e.id));
+      const newLisImageIds = lisImageIds.concat(images.map(e => e.id));
       console.log(`lisImageIds ${lisImageIds}`);
       console.log(`newLisImageIds ${newLisImageIds}`);
       console.log(`newLisImageIds ${newLisImageIds}`);
@@ -199,12 +289,12 @@ export class ProductService {
       console.log(`lisImageIds ${lisImageIds.toString()}`);
       console.log(`newLisImageIds ${newLisImageIds.toString()}`);
       await this.prisma.product.update({
-        where:{
+        where: {
           id
         },
-        data:{
+        data: {
           orderImage: newLisImageIds,
-          images: { connect: newLisImageIds.map(imageId=>({id:imageId}))}
+          images: { connect: newLisImageIds.map(imageId => ({ id: imageId })) }
         }
       })
       console.log(4);
@@ -212,27 +302,27 @@ export class ProductService {
       console.log(5);
       return {
         message: `${files.length} images uploaded successfully`,
-        filePath: files.map(file=>file.path),
-        listImagesId: images.map(i=>i.id),
+        filePath: files.map(file => file.path),
+        listImagesId: images.map(i => i.id),
       };
-    },this.optionTrancitions);
+    }, this.optionTrancitions);
   }
-  async changeImagesOrder(id: number, changeImageOrderDto:ChangeImageOrderDto){
-    const product = await this.prisma.product.findUnique({where:{id: id}, include:{images:{select:{id:true}}}});
-    if(!product) throw new NotFoundException(`Product with ID ${id} not found`);
-    if(!haveSameValues(changeImageOrderDto.orderImage, product.images.map(image=>image.id))) throw new BadRequestException(`Error change, the order product have ${product.images.map(image=>image.id)} and you pass ${changeImageOrderDto.orderImage}`);
+  async changeImagesOrder(id: number, changeImageOrderDto: ChangeImageOrderDto) {
+    const product = await this.prisma.product.findUnique({ where: { id: id }, include: { images: { select: { id: true } } } });
+    if (!product) throw new NotFoundException(`Product with ID ${id} not found`);
+    if (!haveSameValues(changeImageOrderDto.orderImage, product.images.map(image => image.id))) throw new BadRequestException(`Error change, the order product have ${product.images.map(image => image.id)} and you pass ${changeImageOrderDto.orderImage}`);
     await this.prisma.product.update({
-      where:{
+      where: {
         id
       },
-      data:{
+      data: {
         orderImage: changeImageOrderDto.orderImage
       }
-    }, );
+    },);
     await this.updateCache();
   }
 
 
 
- 
+
 }

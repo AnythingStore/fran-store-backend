@@ -28,9 +28,14 @@ export class StoreService {
   async updateCache(): Promise<void> {
     const store = await this.prisma.storeInfo.findFirst({
       include: {
-        image: true
+        image: {
+          select: {
+            id: true,
+            url: true,
+          },
+        },
       }
-    });
+    },);
     await this.cacheManager.set('store', store, 0);
   }
 
@@ -68,28 +73,31 @@ export class StoreService {
       },
       data: updateStoreDto
     });
-
+    await this.updateCache();
     return result;
   }
 
 
   async putImage(file: Express.Multer.File) {
-    return await this.prisma.$transaction(async (prisma) => {
+    const result =  await this.prisma.$transaction(async (prisma) => {
       const store = await this.findOrCreate();
-      
+
       const imageId = await this.imageService.replace(store.image, file, this.bucketName);
 
       await this.prisma.storeInfo.update({
-        where: { id:store.id },
-        data: { imageId: imageId},
+        where: { id: store.id },
+        data: { imageId: imageId },
       });
 
-      await this.updateCache();
       return {
         message: `${file} images uploaded successfully`,
         filePath: file.path,
       };
     }, this.optionTrancitions);
+
+    await this.updateCache();
+    return result; 
   }
+  
 
 }

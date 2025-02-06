@@ -66,17 +66,25 @@ model Carousel {
   updatedAt   DateTime @default(now()) @updatedAt
 }
 
+model CarouselOrder{
+  id          Int    @id @default(autoincrement())
+  orderCarousel  Json   @default("[]") // Lista de Ids de carousel
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+}
+
 model StoreInfo {
   id          Int    @id @default(autoincrement())
-  name        String
-  description String
-  address     String
-  phone       String
-  email       String
-  facebook    String
-  instagram   String
-  location    String
-  orderCarousel  Json   @default("[]") // Lista de Ids de carousel
+  name        String  @default("")
+  description String  @default("")
+  
+  address     String  @default("")
+  openDays     String  @default("")
+  
+  phone       String  @default("")
+  email       String  @default("")
+  facebook    String  @default("")
+  instagram   String  @default("")
 
   imageId Int?   @unique
   image   Image? @relation(fields: [imageId], references: [id])
