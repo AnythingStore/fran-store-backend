@@ -17,6 +17,8 @@ async function bootstrap() {
   const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:5173',
+    'https://dmoda-boutique.vercel.app',
+    'http://dmoda-boutique.vercel.app/',
   ];
 
   const corsOptions = {
@@ -26,8 +28,12 @@ async function bootstrap() {
       } else {
         callback(new Error('Not allowed by CORS'));
       }
-    }
-  }
+    },
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+  };
+
+
 
   app.enableCors(corsOptions);
 

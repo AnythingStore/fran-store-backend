@@ -7,6 +7,7 @@ import { Public } from 'src/auth/public';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ChangeImageOrder as ChangeImageOrderDto } from './dto/change-image-order.dto';
+import { VerifyShoppingCartDto } from './dto/verify-shopping-cart.dto';
 
 @Controller('product')
 @UseInterceptors(CacheInterceptor)
@@ -34,15 +35,17 @@ export class ProductController {
     return this.productService.findAll();
   }
 
-
-
-
-
   @Public()
   @Get('/home')
   @CacheKey('productsHome')
   findProductsHome() {
     return this.productService.findProductsHome();
+  }
+
+  @Public()
+  @Post('/availability')
+  verifyShoppingCart(@Body() verifyShoppingCartDto: VerifyShoppingCartDto){
+    return this.productService.verifyShoppingCart(verifyShoppingCartDto);
   }
 
   @Public()

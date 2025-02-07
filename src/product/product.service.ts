@@ -9,6 +9,7 @@ import { PrismaService } from 'src/prisma.service';
 import { StorageService } from 'src/storage.service';
 import { ChangeImageOrder as ChangeImageOrderDto } from './dto/change-image-order.dto';
 import { haveSameValues } from 'src/utils/orders';
+import { VerifyShoppingCartDto } from './dto/verify-shopping-cart.dto';
 
 @Injectable()
 export class ProductService {
@@ -85,25 +86,25 @@ export class ProductService {
     });
   }
 
-  async find(name:string, categoryId?:number) {
+  async find(name: string, categoryId?: number) {
 
     return await this.prisma.product.findMany({
       where: {
-      categoryId: categoryId,
-      available: true,
-      name: {
-        contains: name,
-        mode: 'insensitive',
-      }
+        categoryId: categoryId,
+        available: true,
+        name: {
+          contains: name,
+          mode: 'insensitive',
+        }
       },
       include: {
-      images: {
-        select: {
-        url: true,
-        id: true,
+        images: {
+          select: {
+            url: true,
+            id: true,
 
+          },
         },
-      },
       },
     });
   }
@@ -126,8 +127,6 @@ export class ProductService {
     if (!product) throw new NotFoundException(`Product with ID ${id} not found`);
     return product;
   }
-
-
 
   async findProductsHome() {
     const categories = await this.prisma.category.findMany({
@@ -173,6 +172,37 @@ export class ProductService {
 
     return productByCategory;
   }
+  async verifyShoppingCart(data: VerifyShoppingCartDto): Promise<Object> {
+
+    const listIds = data.items.map(item => item.id);
+    const products = await this.prisma.product.findMany({
+      where: {
+        id: {
+          in: listIds,
+        },
+        available: true
+      },
+    });
+    const productMap = new Map(products.map(product => [product.id, product]));
+    const missingProducts = [];
+    const insufficientStockProducts = [];
+
+    for (const item of data.items) {
+      const product = productMap.get(item.id);
+      if (!product) {
+        missingProducts.push(item.id);
+      } else if (product.stock < item.stock) {
+        insufficientStockProducts.push({ id: item.id, availableStock: product.stock });
+      }
+    }
+
+    return {
+      missingProducts,
+      insufficientStockProducts,
+    };
+  }
+
+  //CRUD
 
   async update(id: number, updateProductDto: UpdateProductDto) {
     const product = await this.prisma.product.update({
