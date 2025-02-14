@@ -173,6 +173,7 @@ export class ProductService {
     return productByCategory;
   }
   async verifyShoppingCart(data: VerifyShoppingCartDto): Promise<Object> {
+    console.log('asdfadasasd')
 
     const listIds = data.items.map(item => item.id);
     const products = await this.prisma.product.findMany({
@@ -205,18 +206,16 @@ export class ProductService {
   //CRUD
 
   async update(id: number, updateProductDto: UpdateProductDto) {
+    const _product = await this.prisma.product.findUnique({
+      where: { id },
+    });
+    if (!_product) throw new NotFoundException(`Product with ID ${id} not found`);
+
     const product = await this.prisma.product.update({
       where: {
         id: id
       },
-      data: {
-        name: updateProductDto.name,
-        description: updateProductDto.description,
-        price: updateProductDto.price,
-        categoryId: updateProductDto.categoryId,
-        stock: updateProductDto.stock,
-        available: updateProductDto.available,
-      }
+      data: {...updateProductDto}
     });
 
     await this.updateCache();

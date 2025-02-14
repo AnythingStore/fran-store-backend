@@ -92,14 +92,14 @@ export class CategoryService {
 
   async remove(id: number) {
     const result = await this.prisma.$transaction(async (prisma) => {
-      const category = await this.prisma.category.findUnique({
+      const category = await prisma.category.findUnique({
         where: {
           id: id
         }
       });
       if (!category) throw new NotFoundException('Category not found');
 
-      const products = await this.prisma.product.findMany({
+      const products = await prisma.product.findMany({
         where: {
           categoryId: id
         },
@@ -119,7 +119,7 @@ export class CategoryService {
       const productsImagesDeletecd = await this.imageService.deleteMany(productsImages, this.productService.bucketName);
 
       //delete all products of this category
-      const resultDeleteProducts = await this.prisma.product.deleteMany({
+      const resultDeleteProducts = await prisma.product.deleteMany({
         where: {
           categoryId: id
         }
@@ -130,7 +130,7 @@ export class CategoryService {
       const categoryImage = await this.imageService.delete(category.imageId, this.bucketName);
 
       //delete this category
-      const result = await this.prisma.category.delete({
+      const result = await prisma.category.delete({
         where: {
           id: id
         }

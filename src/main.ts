@@ -1,4 +1,4 @@
-import { NestFactory, Reflector } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
@@ -6,23 +6,27 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const isDebug = process.env.NODE_ENV == 'development';
+  console.log(`isDebug: ${isDebug}`);
 
   // HTTP Header Protection
-  // app.use(helmet());
-  
+  app.use(helmet());
+
   //CSRF Protection
   // app.use(csurf());
 
   //origin
-  const allowedOrigins = [
+  const allowedOrigins =[
     'http://localhost:3000',
     'http://localhost:5173',
+    'http://localhost/',
+    'https://web-ten-kappa-98.vercel.app',
     'https://dmoda-boutique.vercel.app',
     'http://dmoda-boutique.vercel.app/',
   ];
 
   const corsOptions = {
-    origin: (origin, callback) => {
+    origin: isDebug ? "*": (origin, callback) => {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -48,7 +52,7 @@ async function bootstrap() {
 
 
 
-  
+
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

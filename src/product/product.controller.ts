@@ -4,7 +4,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CacheInterceptor, CacheKey } from '@nestjs/cache-manager';
 import { Public } from 'src/auth/public';
-import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ChangeImageOrder as ChangeImageOrderDto } from './dto/change-image-order.dto';
 import { VerifyShoppingCartDto } from './dto/verify-shopping-cart.dto';
@@ -18,8 +18,6 @@ export class ProductController {
   @Public()
   @Get()
   find(@Query('name') name: string, @Query('category') category: string) {
-    console.log(`categoryId ${category}`);
-    console.log(`categoryId ${category}`);
     return this.productService.find(name, category?+category:undefined);
   }
   
